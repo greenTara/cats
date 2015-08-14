@@ -1,6 +1,6 @@
 package cats
 
-import simulacrum._
+import simulacrum.typeclass
 
 /**
  * Applicative functor.
@@ -10,9 +10,9 @@ import simulacrum._
  * See: [[https://www.cs.ox.ac.uk/jeremy.gibbons/publications/iterator.pdf The Essence of the Iterator Pattern]]
  * Also: [[http://staff.city.ac.uk/~ross/papers/Applicative.pdf Applicative programming with effects]]
  *
- * Must obey the laws defined in [[laws.ApplicativeLaws]].
+ * Must obey the laws defined in cats.laws.ApplicativeLaws.
  */
-trait Applicative[F[_]] extends Apply[F] { self =>
+@typeclass trait Applicative[F[_]] extends Apply[F] { self =>
   /**
    * `pure` lifts any value into the Applicative Functor
    *
@@ -20,7 +20,7 @@ trait Applicative[F[_]] extends Apply[F] { self =>
    */
   def pure[A](x: A): F[A]
 
-  override def map[A, B](fa: F[A])(f: A => B): F[B] = apply(fa)(pure(f))
+  override def map[A, B](fa: F[A])(f: A => B): F[B] = ap(fa)(pure(f))
 
   /**
    * Two sequentially dependent Applicatives can be composed.
@@ -42,10 +42,6 @@ trait Applicative[F[_]] extends Apply[F] { self =>
   def sequence[G[_]: Traverse, A](as: G[F[A]]): F[G[A]] =
     traverse(as)(a => a)
 
-}
-
-object Applicative {
-  def apply[F[_]](implicit ev: Applicative[F]): Applicative[F] = ev
 }
 
 trait CompositeApplicative[F[_],G[_]]

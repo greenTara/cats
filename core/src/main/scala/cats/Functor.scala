@@ -1,6 +1,6 @@
 package cats
 
-import simulacrum._
+import simulacrum.typeclass
 import functor.Contravariant
 
 /**
@@ -8,7 +8,7 @@ import functor.Contravariant
  *
  * The name is short for "covariant functor".
  *
- * Must obey the laws defined in [[laws.FunctorLaws]].
+ * Must obey the laws defined in cats.laws.FunctorLaws.
  */
 @typeclass trait Functor[F[_]] extends functor.Invariant[F] { self =>
   def map[A, B](fa: F[A])(f: A => B): F[B]
@@ -31,8 +31,8 @@ import functor.Contravariant
    */
   override def composeWithContravariant[G[_]](implicit GG: Contravariant[G]): Contravariant[Lambda[X => F[G[X]]]] =
     new Functor.ContravariantComposite[F, G] {
-      def F = self
-      def G = GG
+      def F: Functor[F] = self
+      def G: Contravariant[G] = GG
     }
 
   override def composeWithFunctor[G[_]: Functor]: Functor[Lambda[X => F[G[X]]]] = compose[G]

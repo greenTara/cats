@@ -33,7 +33,7 @@ package object cats {
       def flatMap[A, B](a: A)(f: A => B): B = f(a)
       def coflatMap[A, B](a: A)(f: A => B): B = f(a)
       override def map[A, B](fa: A)(f: A => B): B = f(fa)
-      override def apply[A, B](fa: A)(ff: A => B): B = ff(fa)
+      override def ap[A, B](fa: A)(ff: A => B): B = ff(fa)
       override def flatten[A](ffa: A): A = ffa
       override def map2[A, B, Z](fa: A, fb: B)(f: (A, B) => Z): Z = f(fa, fb)
       override def lift[A, B](f: A => B): A => B = f
@@ -45,10 +45,12 @@ package object cats {
   type Order[A] = algebra.Order[A]
   type Semigroup[A] = algebra.Semigroup[A]
   type Monoid[A] = algebra.Monoid[A]
+  type Group[A] = algebra.Group[A]
 
   val Eq = algebra.Eq
   val PartialOrder = algebra.PartialOrder
   val Order = algebra.Order
   val Semigroup = algebra.Semigroup
   val Monoid = algebra.Monoid
+  val Group = algebra.Group
 }

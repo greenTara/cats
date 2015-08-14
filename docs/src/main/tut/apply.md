@@ -7,12 +7,12 @@ scaladoc: "#cats.Apply"
 ---
 # Apply
 
-Apply extends the Functor typeclass (which features the familiar
-"map" function) with a new function "apply".  The apply function
-is similar to map in that we are transforming a value in a context,
-e.g. F[A] where F is the context (e.g. Option, List, Future) and A
-is the type of the value.  But the function A => B is now in the
-context itself, e.g. F[A => B] such as Option[A => B] or List[A => B].
+`Apply` extends the [`Functor`](functor.md) type class (which features the familiar `map`
+function) with a new function `ap`. The `ap` function is similar to `map`
+in that we are transforming a value in a context (a context being the `F` in `F[A]`;
+a context can be `Option`, `List` or `Future` for example).
+However, the difference between `ap` and `map` is that for `ap` the function that 
+takes care of the transformation is of type `F[A => B]`, whereas for `map` it is `A => B`:
 
 ```tut
 import cats._
@@ -21,24 +21,23 @@ val double: Int => Int = _ * 2
 val addTwo: Int => Int = _ + 2
 
 implicit val optionApply: Apply[Option] = new Apply[Option] {
-  def apply[A, B](fa: Option[A])(f: Option[A => B]): Option[B] =
+  def ap[A, B](fa: Option[A])(f: Option[A => B]): Option[B] =
     fa.flatMap (a => f.map (ff => ff(a)))
 
-  def map[A,B](fa: Option[A])(f: A => B) = fa map f
+  def map[A,B](fa: Option[A])(f: A => B): Option[B] = fa map f
 }
 
 implicit val listApply: Apply[List] = new Apply[List] {
-  def apply[A, B](fa: List[A])(f: List[A => B]): List[B] =
+  def ap[A, B](fa: List[A])(f: List[A => B]): List[B] =
     fa.flatMap (a => f.map (ff => ff(a)))
 
-  def map[A,B](fa: List[A])(f: A => B) = fa map f
+  def map[A,B](fa: List[A])(f: A => B): List[B] = fa map f
 }
 ```
 
 ### map
 
-Since Apply extends Functor, as we expect, we can use the map method
-from Functor:
+Since `Apply` extends `Functor`, we can use the `map` method from `Functor`:
 
 ```tut
 Apply[Option].map(Some(1))(intToString)
@@ -46,43 +45,78 @@ Apply[Option].map(Some(1))(double)
 Apply[Option].map(None)(double)
 ```
 
+### compose
 
-### apply
-But also the new apply method, which applies functions from the functor
+And like functors, `Apply` instances also compose:
 
 ```tut
-Apply[Option].apply(Some(1))(Some(intToString))
-Apply[Option].apply(Some(1))(Some(double))
-Apply[Option].apply(None)(Some(double))
-Apply[Option].apply(Some(1))(None)
-Apply[Option].apply(None)(None)
+val listOpt = Apply[List] compose Apply[Option]
+val plusOne = (x:Int) => x + 1
+listOpt.ap(List(Some(1), None, Some(3)))(List(Some(plusOne)))
 ```
 
-### apply3, etc
+### ap
+The `ap` method is a method that `Functor` does not have:
 
-Apply's apply function made it possible to build useful functions that
-"lift" a function that takes multiple arguments into a context.
+```tut
+Apply[Option].ap(Some(1))(Some(intToString))
+Apply[Option].ap(Some(1))(Some(double))
+Apply[Option].ap(None)(Some(double))
+Apply[Option].ap(Some(1))(None)
+Apply[Option].ap(None)(None)
+```
+
+### ap2, ap3, etc
+
+`Apply` also offers variants of `ap`. The functions `apN` (for `N` between `2` and `22`) 
+accept `N` arguments where `ap` accepts `1`:
 
 For example:
 
 ```tut
-val add2 = (a: Int, b: Int) => a + b
-Apply[Option].apply2(Some(1), Some(2))(Some(add2))
+val addArity2 = (a: Int, b: Int) => a + b
+Apply[Option].ap2(Some(1), Some(2))(Some(addArity2))
+
+val addArity3 = (a: Int, b: Int, c: Int) => a + b + c
+Apply[Option].ap3(Some(1), Some(2), Some(3))(Some(addArity3))
 ```
 
-Interestingly, if any of the arguments of this example are None, the
-final result is None.  The effects of the context we are operating on
-are carried through the entire computation.
+Note that if any of the arguments of this example is `None`, the
+final result is `None` as well.  The effects of the context we are operating on
+are carried through the entire computation:
 
 ```tut
-Apply[Option].apply2(Some(1), None)(Some(add2))
-Apply[Option].apply2(Some(1), Some(2))(None)
+Apply[Option].ap2(Some(1), None)(Some(addArity2))
+Apply[Option].ap4(Some(1), Some(2), Some(3), Some(4))(None)
+```
+
+### map2, map3, etc
+
+Similarly, `mapN` functions are available:
+
+```tut
+Apply[Option].map2(Some(1), Some(2))(addArity2)
+
+Apply[Option].map3(Some(1), Some(2), Some(3))(addArity3)
+```
+
+### tuple2, tuple3, etc
+
+And `tupleN`:
+
+```tut
+Apply[Option].tuple2(Some(1), Some(2))
+
+Apply[Option].tuple3(Some(1), Some(2), Some(3))
 ```
 
 ## apply builder syntax
 
-The `|@|` operator offers an alternative syntax for the higher-arity `Apply` functions (`applyN`, `mapN`).
-First, import `cats.syntax.all._` or `cats.syntax.apply._`. Here we see that following two functions, `f1` and `f2`, are equivalent:
+The `|@|` operator offers an alternative syntax for the higher-arity `Apply`
+functions (`apN`, `mapN` and `tupleN`).
+In order to use it, first import `cats.syntax.all._` or `cats.syntax.apply._`.
+Here we see that the following two functions, `f1` and `f2`, are equivalent:
+
 ```tut
 import cats.syntax.apply._
 
@@ -96,14 +130,20 @@ f1(Some(1), Some(2), Some(3))
 f2(Some(1), Some(2), Some(3))
 ```
 
-All instances created by `|@|` have `map`, `apply`, and `tupled` methods of the appropriate arity.
-
-## composition
-
-Like Functors, Apply instances also compose:
+All instances created by `|@|` have `map`, `ap`, and `tupled` methods of the appropriate arity:
 
 ```tut
-val listOpt = Apply[List] compose Apply[Option]
-val plusOne = (x:Int) => x + 1
-listOpt.apply(List(Some(1), None, Some(3)))(List(Some(plusOne)))
+import cats.syntax.apply._
+
+val option2 = Option(1) |@| Option(2)
+val option3 = option2 |@| Option.empty[Int]
+
+option2 map addArity2
+option3 map addArity3
+
+option2 ap Some(addArity2)
+option3 ap Some(addArity3)
+
+option2.tupled
+option3.tupled
 ```
