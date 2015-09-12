@@ -1,7 +1,7 @@
 package cats
 package tests
 
-import cats.arrow.{Split, Arrow}
+import cats.arrow.{Arrow, Choice, Split}
 import cats.data.Kleisli
 import cats.functor.Strong
 import cats.laws.discipline._
@@ -10,6 +10,7 @@ import cats.laws.discipline.eq._
 import org.scalacheck.Arbitrary
 import org.scalacheck.Prop._
 import algebra.laws.GroupLaws
+import cats.laws.discipline.{SemigroupKTests, MonoidKTests}
 
 class KleisliTests extends CatsSuite {
   implicit def kleisliEq[F[_], A, B](implicit A: Arbitrary[A], FB: Eq[F[B]]): Eq[Kleisli[F, A, B]] =
@@ -19,6 +20,12 @@ class KleisliTests extends CatsSuite {
     implicit val kleisliArrow = Kleisli.kleisliArrow[Option]
     checkAll("Kleisli[Option, Int, Int]", ArrowTests[Kleisli[Option, ?, ?]].arrow[Int, Int, Int, Int, Int, Int])
     checkAll("Arrow[Kleisli[Option, ?, ?]]", SerializableTests.serializable(Arrow[Kleisli[Option, ?, ?]]))
+  }
+
+  {
+    implicit val kleisliChoice = Kleisli.kleisliChoice[Option]
+    checkAll("Kleisli[Option, Int, Int]", ChoiceTests[Kleisli[Option, ?, ?]].choice[Int, Int, Int, Int])
+    checkAll("Choice[Kleisli[Option, ?, ?]]", SerializableTests.serializable(Choice[Kleisli[Option, ?, ?]]))
   }
 
   {
@@ -64,15 +71,27 @@ class KleisliTests extends CatsSuite {
   }
 
   {
-    implicit val kleisliMonoid = Kleisli.kleisliMonoid[Option, Int]
-    checkAll("Kleisli[Option, Int, Int]", GroupLaws[Kleisli[Option, Int, Int]].monoid)
-    checkAll("Monoid[Kleisli[Option, Int, Int]]", SerializableTests.serializable(kleisliMonoid))
+    implicit val kleisliMonoid = Kleisli.kleisliMonoid[Option, Int, String]
+    checkAll("Kleisli[Option, Int, String]", GroupLaws[Kleisli[Option, Int, String]].monoid)
+    checkAll("Monoid[Kleisli[Option, Int, String]]", SerializableTests.serializable(kleisliMonoid))
   }
 
   {
-    implicit val kleisliSemigroup = Kleisli.kleisliSemigroup[Option, Int]
-    checkAll("Kleisli[Option, Int, Int]", GroupLaws[Kleisli[Option, Int, Int]].semigroup)
-    checkAll("Semigroup[Kleisli[Option, Int, Int]]", SerializableTests.serializable(kleisliSemigroup))
+    implicit val kleisliSemigroup = Kleisli.kleisliSemigroup[Option, Int, String]
+    checkAll("Kleisli[Option, Int, String]", GroupLaws[Kleisli[Option, Int, String]].semigroup)
+    checkAll("Semigroup[Kleisli[Option, Int, String]]", SerializableTests.serializable(kleisliSemigroup))
+  }
+
+  {
+    implicit val kleisliMonoidK = Kleisli.kleisliMonoidK[Option]
+    checkAll("Kleisli[Option, Int, Int]", MonoidKTests[Lambda[A => Kleisli[Option, A, A]]].monoidK[Int])
+    checkAll("MonoidK[Lambda[A => Kleisli[Option, A, A]]]", SerializableTests.serializable(kleisliMonoidK))
+  }
+
+  {
+    implicit val kleisliSemigroupK = Kleisli.kleisliSemigroupK[Option]
+    checkAll("Kleisli[Option, Int, Int]", SemigroupKTests[Lambda[A => Kleisli[Option, A, A]]].semigroupK[Int])
+    checkAll("SemigroupK[Lambda[A => Kleisli[Option, A, A]]]", SerializableTests.serializable(kleisliSemigroupK))
   }
 
   check {
